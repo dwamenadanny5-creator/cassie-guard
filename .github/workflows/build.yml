@@ -5,47 +5,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Create Project Files
+
+      - name: Create Project
         run: |
-          mkdir -p app/src/main/java/com/cassie/guard
-          mkdir -p app/src/main/res/xml
-          mkdir -p app/src/main/res/values
-          mkdir -p app/src/main/res/layout
-          cat > "settings.gradle" << 'EOC'
-          include ':app'
-          EOC
-          cat > "build.gradle" << 'EOC'
+          python3 << 'PY'
+          import os, pathlib
+          os.makedirs("app/src/main/java/com/cassie/guard", exist_ok=True)
+          os.makedirs("app/src/main/res/xml", exist_ok=True)
+          os.makedirs("app/src/main/res/values", exist_ok=True)
+          os.makedirs("app/src/main/res/layout", exist_ok=True)
+
+          pathlib.Path("settings.gradle").write_text("include ':app'\n")
+
+          pathlib.Path("build.gradle").write_text("""
           buildscript {
               repositories { google(); mavenCentral() }
               dependencies { classpath 'com.google.gms:google-services:4.4.0' }
           }
           allprojects { repositories { google(); mavenCentral() } }
-          EOC
-          cat > "google-services.json" << 'EOC'
-          {
-            "project_info": {
-              "project_number": "520924214740",
-              "project_id": "cassie-guard",
-              "storage_bucket": "cassie-guard.appspot.com"
-            },
-            "client": [{
-              "client_info": {
-                "mobilesdk_app_id": "1:520924214740:android:abc123",
-                "android_client_info": { "package_name": "com.cassie.guard" }
-              },
-              "oauth_client": [],
-              "api_key": [{ "current_key": "AIzaSyDummy" }],
-              "services": { "appinvite_service": { "other_platform_oauth_client": [] } }
-            }],
-            "configuration_version": "1"
-          }
-          EOC
-          cp google-services.json app/google-services.json
-          cat > "app/build.gradle" << 'EOC'
+          """)
+
+          pathlib.Path("app/build.gradle").write_text("""
           plugins {
               id 'com.android.application'
-              id 'kotlin-android'
+              id 'org.jetbrains.kotlin.android'
               id 'com.google.gms.google-services'
           }
           android {
@@ -59,8 +42,8 @@ jobs:
                   versionName "1.0"
               }
               buildTypes {
-                  debug { minifyEnabled false }
                   release { minifyEnabled false }
+                  debug { minifyEnabled false }
               }
               compileOptions {
                   sourceCompatibility JavaVersion.VERSION_17
@@ -76,183 +59,34 @@ jobs:
               implementation 'com.google.firebase:firebase-firestore:24.9.1'
               implementation 'com.google.firebase:firebase-messaging:23.4.0'
           }
-          EOC
-          cat > "app/src/main/AndroidManifest.xml" << 'EOC'
-          <?xml version="1.0" encoding="utf-8"?>
+          """)
+
+          pathlib.Path("google-services.json").write_text('{"project_info":{"project_number":"520924214740","project_id":"cassie-guard","storage_bucket":"cassie-guard.appspot.com"},"client":[{"client_info":{"mobilesdk_app_id":"1:520924214740:android:abc","android_client_info":{"package_name":"com.cassie.guard"}},"oauth_client":[],"api_key":[{"current_key":"AIzaSyDummy"}],"services":{"appinvite_service":{"other_platform_oauth_client":[]}}}],"configuration_version":"1"}')
+          pathlib.Path("app/google-services.json").write_text(pathlib.Path("google-services.json").read_text())
+
+          pathlib.Path("app/src/main/AndroidManifest.xml").write_text("""<?xml version="1.0" encoding="utf-8"?>
           <manifest xmlns:android="http://schemas.android.com/apk/res/android">
               <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-              <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
-              <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
               <uses-permission android:name="android.permission.INTERNET"/>
               <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
-              <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
               <uses-permission android:name="android.permission.BIND_DEVICE_ADMIN"/>
-              <uses-permission android:name="android.permission.SEND_SMS"/>
-              <uses-permission android:name="android.permission.READ_SMS"/>
-              <uses-permission android:name="android.permission.READ_PHONE_STATE"/>
-              <application
-                  android:allowBackup="true"
-                  android:label="Cassie Guard"
-                  android:theme="@android:style/Theme.DeviceDefault.Light">
-                  <activity android:name=".LoginActivity" android:exported="true">
-                      <intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter>
-                  </activity>
+              <application android:allowBackup="true" android:label="Cassie Guard" android:theme="@android:style/Theme.DeviceDefault.Light">
+                  <activity android:name=".LoginActivity" android:exported="true"><intent-filter><action android:name="android.intent.action.MAIN"/><category android:name="android.intent.category.LAUNCHER"/></intent-filter></activity>
                   <activity android:name=".MainActivity" android:exported="true"/>
-                  <receiver android:name=".MyDeviceAdmin" android:permission="android.permission.BIND_DEVICE_ADMIN">
-                      <meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin"/>
-                      <intent-filter><action android:name="android.app.action.DEVICE_ADMIN_ENABLED"/></intent-filter>
-                  </receiver>
-                  <receiver android:name=".SimRemovalReceiver">
-                      <intent-filter><action android:name="android.intent.action.SIM_STATE_CHANGED"/></intent-filter>
-                  </receiver>
-                  <receiver android:name=".SmsBlockReceiver">
-                      <intent-filter><action android:name="android.intent.action.PHONE_STATE"/><action android:name="android.provider.Telephony.SMS_RECEIVE"/></intent-filter>
-                  </receiver>
-                  <service android:name=".CrowdFinderService" android:foregroundServiceType="location"/>
-                  <service android:name=".AutoLockService"/>
+                  <receiver android:name=".MyDeviceAdmin" android:permission="android.permission.BIND_DEVICE_ADMIN"><meta-data android:name="android.app.device_admin" android:resource="@xml/device_admin"/><intent-filter><action android:name="android.app.action.DEVICE_ADMIN_ENABLED"/></intent-filter></receiver>
               </application>
           </manifest>
-          EOC
-          cat > "app/src/main/res/xml/device_admin.xml" << 'EOC'
-          <?xml version="1.0" encoding="utf-8"?>
-          <device-admin><uses-policies><force-lock/><watch-login/><wipe-data/></uses-policies></device-admin>
-          EOC
-          cat > "app/src/main/res/values/strings.xml" << 'EOC'
-          <resources><string name="app_name">Cassie Guard</string></resources>
-          EOC
-          cat > "app/src/main/res/layout/activity_login.xml" << 'EOC'
-          <?xml version="1.0" encoding="utf-8"?>
-          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="24dp" android:gravity="center">
-              <TextView android:text="Cassie Guard Login" android:textSize="24sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-              <EditText android:id="@+id/email" android:hint="Email" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-              <EditText android:id="@+id/password" android:hint="Password" android:inputType="textPassword" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-              <Button android:id="@+id/btnLogin" android:text="Login" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-          </LinearLayout>
-          EOC
-          cat > "app/src/main/res/layout/activity_main.xml" << 'EOC'
-          <?xml version="1.0" encoding="utf-8"?>
-          <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp">
-              <TextView android:text="Cassie Guard - Protected" android:textSize="20sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-              <TextView android:id="@+id/status" android:text="Status: Active" android:layout_width="wrap_content" android:layout_height="wrap_content"/>
-              <Button android:id="@+id/btnLock" android:text="Test Lock" android:layout_width="match_parent" android:layout_height="wrap_content"/>
-          </LinearLayout>
-          EOC
-          cat > "app/src/main/java/com/cassie/guard/MyDeviceAdmin.kt" << 'EOC'
-          package com.cassie.guard
-          import android.app.admin.DeviceAdminReceiver
-          class MyDeviceAdmin : DeviceAdminReceiver()
-          EOC
-          cat > "app/src/main/java/com/cassie/guard/LoginActivity.kt" << 'EOC'
-          package com.cassie.guard
-          import android.content.Intent
-          import android.os.Bundle
-          import androidx.appcompat.app.AppCompatActivity
-          import android.widget.Button
-          import android.widget.EditText
-          import com.google.firebase.auth.FirebaseAuth
-          class LoginActivity : AppCompatActivity() {
-              override fun onCreate(s: Bundle?) {
-                  super.onCreate(s)
-                  setContentView(R.layout.activity_login)
-                  val auth = FirebaseAuth.getInstance()
-                  if (auth.currentUser != null) { startActivity(Intent(this, MainActivity::class.java)); finish(); return }
-                  findViewById<Button>(R.id.btnLogin).setOnClickListener {
-                      val e = findViewById<EditText>(R.id.email).text.toString()
-                      val p = findViewById<EditText>(R.id.password).text.toString()
-                      auth.signInWithEmailAndPassword(e, p).addOnSuccessListener {
-                          startActivity(Intent(this, MainActivity::class.java)); finish()
-                      }
-                  }
-              }
-          }
-          EOC
-          cat > "app/src/main/java/com/cassie/guard/MainActivity.kt" << 'EOC'
-          package com.cassie.guard
-          import android.app.admin.DevicePolicyManager
-          import android.content.ComponentName
-          import android.content.Context
-          import android.content.Intent
-          import android.os.Bundle
-          import androidx.appcompat.app.AppCompatActivity
-          import android.widget.Button
-          import android.widget.TextView
-          import com.google.firebase.auth.FirebaseAuth
-          import com.google.firebase.firestore.FirebaseFirestore
-          import com.google.android.gms.location.LocationServices
-          class MainActivity : AppCompatActivity() {
-              override fun onCreate(b: Bundle?) {
-                  super.onCreate(b)
-                  setContentView(R.layout.activity_main)
-                  val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-                  val comp = ComponentName(this, MyDeviceAdmin::class.java)
-                  if (!dpm.isAdminActive(comp)) {
-                      startActivity(Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {
-                          putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, comp)
-                          putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, "Enable to protect against theft")
-                      })
-                  }
-                  findViewById<Button>(R.id.btnLock).setOnClickListener {
-                      if (dpm.isAdminActive(comp)) dpm.lockNow()
-                  }
-                  try {
-                      val fused = LocationServices.getFusedLocationProviderClient(this)
-                      fused.lastLocation.addOnSuccessListener { loc ->
-                          if (loc != null) {
-                              val db = FirebaseFirestore.getInstance()
-                              val uid = FirebaseAuth.getInstance().currentUser?.uid ?: "anon"
-                              val data = hashMapOf("lat" to loc.latitude, "lng" to loc.longitude, "time" to System.currentTimeMillis(), "link" to "https://maps.google.com/?q=${loc.latitude},${loc.longitude}")
-                              db.collection("users").document(uid).collection("devices").document("main").set(data)
-                              findViewById<TextView>(R.id.status).text = "Location: ${loc.latitude}, ${loc.longitude}"
-                          }
-                      }
-                  } catch(e: Exception) {}
-              }
-          }
-          EOC
-          cat > "app/src/main/java/com/cassie/guard/CrowdFinderService.kt" << 'EOC'
-          package com.cassie.guard
-          import android.app.Service
-          import android.content.Intent
-          import android.os.IBinder
-          class CrowdFinderService : Service() { override fun onBind(i: Intent?): IBinder? = null }
-          EOC
-          cat > "app/src/main/java/com/cassie/guard/AutoLockService.kt" << 'EOC'
-          package com.cassie.guard
-          import android.app.Service
-          import android.content.Intent
-          import android.os.IBinder
-          class AutoLockService : Service() { override fun onBind(i: Intent?): IBinder? = null }
-          EOC
-          cat > "app/src/main/java/com/cassie/guard/SimRemovalReceiver.kt" << 'EOC'
-          package com.cassie.guard
-          import android.content.BroadcastReceiver
-          import android.content.Context
-          import android.content.Intent
-          import android.app.admin.DevicePolicyManager
-          import android.content.ComponentName
-          class SimRemovalReceiver : BroadcastReceiver() {
-              override fun onReceive(c: Context, i: Intent) {
-                  val dpm = c.getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
-                  val comp = ComponentName(c, MyDeviceAdmin::class.java)
-                  if (dpm.isAdminActive(comp)) dpm.lockNow()
-              }
-          }
-          EOC
-          cat > "app/src/main/java/com/cassie/guard/SmsBlockReceiver.kt" << 'EOC'
-          package com.cassie.guard
-          import android.content.BroadcastReceiver
-          import android.content.Context
-          import android.content.Intent
-          class SmsBlockReceiver : BroadcastReceiver() { override fun onReceive(c: Context, i: Intent) {} }
-          EOC
-          cat > "app/src/main/java/com/cassie/guard/Helper.kt" << 'EOC'
-          package com.cassie.guard
-          object Helper { fun isValid(): Boolean = true }
-          EOC
-          cat > "app/src/main/java/com/cassie/guard/AntiFlashManager.kt" << 'EOC'
-          package com.cassie.guard
-          class AntiFlashManager { fun block() {} }
-          EOC
+          """)
+
+          pathlib.Path("app/src/main/res/xml/device_admin.xml").write_text('<?xml version="1.0" encoding="utf-8"?><device-admin><uses-policies><force-lock/><watch-login/></uses-policies></device-admin>')
+          pathlib.Path("app/src/main/res/values/strings.xml").write_text('<resources><string name="app_name">Cassie Guard</string></resources>')
+          pathlib.Path("app/src/main/res/layout/activity_login.xml").write_text('<?xml version="1.0" encoding="utf-8"?><LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="24dp" android:gravity="center"><TextView android:text="Cassie Guard" android:textSize="24sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/><EditText android:id="@+id/email" android:hint="Email" android:layout_width="match_parent" android:layout_height="wrap_content"/><EditText android:id="@+id/password" android:hint="Password" android:inputType="textPassword" android:layout_width="match_parent" android:layout_height="wrap_content"/><Button android:id="@+id/btnLogin" android:text="Login" android:layout_width="match_parent" android:layout_height="wrap_content"/></LinearLayout>')
+          pathlib.Path("app/src/main/res/layout/activity_main.xml").write_text('<?xml version="1.0" encoding="utf-8"?><LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:padding="16dp"><TextView android:text="Cassie Guard Protected" android:textSize="20sp" android:layout_width="wrap_content" android:layout_height="wrap_content"/><TextView android:id="@+id/status" android:text="Status Active" android:layout_width="wrap_content" android:layout_height="wrap_content"/><Button android:id="@+id/btnLock" android:text="Test Lock" android:layout_width="match_parent" android:layout_height="wrap_content"/></LinearLayout>')
+
+          pathlib.Path("app/src/main/java/com/cassie/guard/MyDeviceAdmin.kt").write_text("package com.cassie.guard\nimport android.app.admin.DeviceAdminReceiver\nclass MyDeviceAdmin : DeviceAdminReceiver()")
+          pathlib.Path("app/src/main/java/com/cassie/guard/LoginActivity.kt").write_text("package com.cassie.guard\nimport android.content.Intent\nimport android.os.Bundle\nimport androidx.appcompat.app.AppCompatActivity\nimport android.widget.Button\nimport android.widget.EditText\nimport com.google.firebase.auth.FirebaseAuth\nclass LoginActivity : AppCompatActivity() {\n override fun onCreate(s: Bundle?) {\n  super.onCreate(s)\n  setContentView(R.layout.activity_login)\n  val auth = FirebaseAuth.getInstance()\n  if (auth.currentUser != null) { startActivity(Intent(this, MainActivity::class.java)); finish(); return }\n  findViewById<Button>(R.id.btnLogin).setOnClickListener {\n   val e = findViewById<EditText>(R.id.email).text.toString()\n   val p = findViewById<EditText>(R.id.password).text.toString()\n   auth.signInWithEmailAndPassword(e,p).addOnSuccessListener { startActivity(Intent(this, MainActivity::class.java)); finish() }\n  }\n }\n}")
+          pathlib.Path("app/src/main/java/com/cassie/guard/MainActivity.kt").write_text("package com.cassie.guard\nimport android.app.admin.DevicePolicyManager\nimport android.content.ComponentName\nimport android.content.Context\nimport android.content.Intent\nimport android.os.Bundle\nimport androidx.appcompat.app.AppCompatActivity\nimport android.widget.Button\nimport android.widget.TextView\nimport com.google.firebase.auth.FirebaseAuth\nimport com.google.firebase.firestore.FirebaseFirestore\nclass MainActivity : AppCompatActivity() {\n override fun onCreate(b: Bundle?) {\n  super.onCreate(b)\n  setContentView(R.layout.activity_main)\n  val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager\n  val comp = ComponentName(this, MyDeviceAdmin::class.java)\n  if (!dpm.isAdminActive(comp)) {\n   startActivity(Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN).apply {\n    putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, comp)\n    putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION, \"Enable to protect\")\n   })\n  }\n  findViewById<Button>(R.id.btnLock).setOnClickListener { if (dpm.isAdminActive(comp)) dpm.lockNow() }\n  findViewById<TextView>(R.id.status).text = \"Status: Active \" + (FirebaseAuth.getInstance().currentUser?.email ?: \"\")\n }\n}")
+          PY
 
       - name: Setup JDK 17
         uses: actions/setup-java@v4
